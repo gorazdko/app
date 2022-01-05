@@ -17,6 +17,9 @@ fn main() -> ! {
     asm::nop(); // To not have main optimize to abort in release mode, remove when you add code
 
     let mut peripherals = stm32f469::Peripherals::take().unwrap();
+
+    peripherals.RCC.ahb1enr.write(|w| w.gpioden().set_bit());
+
     let gpioa = &peripherals.GPIOD;
     gpioa.odr.modify(|_, w| w.odr4().set_bit());
     gpioa.odr.modify(|_, w| w.odr5().clear_bit());
