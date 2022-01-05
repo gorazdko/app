@@ -24,6 +24,12 @@ panic-halt = "0.2.0"
 # features = ["stm32f303", "rt"]
 # version = "0.7.1"
 
+
+[dependencies.stm32f4]
+version = "0.14.0"
+features = ["stm32f469", "rt"]
+
+
 # this lets you use `cargo fix`!
 [[bin]]
 name = "app"
