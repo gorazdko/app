@@ -22,10 +22,13 @@ fn main() -> ! {
 
     let gpiod = &peripherals.GPIOD;
 
-    gpiod.moder.write(|w| {
-        w.moder4().output();
-        w.moder5().output();
-    });
+    gpiod.moder.write(
+        |w| w.moder4().output(), //w.moder5().output();
+    );
+
+    gpiod.moder.write(
+        |w| w.moder5().output(), //w.moder5().output();
+    );
 
     gpiod.odr.modify(|_, w| w.odr4().set_bit());
     gpiod.odr.modify(|_, w| w.odr5().clear_bit());
