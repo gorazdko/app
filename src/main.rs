@@ -20,9 +20,15 @@ fn main() -> ! {
 
     peripherals.RCC.ahb1enr.write(|w| w.gpioden().set_bit());
 
-    let gpioa = &peripherals.GPIOD;
-    gpioa.odr.modify(|_, w| w.odr4().set_bit());
-    gpioa.odr.modify(|_, w| w.odr5().clear_bit());
+    let gpiod = &peripherals.GPIOD;
+
+    gpiod.moder.write(|w| {
+        w.moder4().output();
+        w.moder5().output();
+    });
+
+    gpiod.odr.modify(|_, w| w.odr4().set_bit());
+    gpiod.odr.modify(|_, w| w.odr5().clear_bit());
 
     loop {
         // your code goes here
