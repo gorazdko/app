@@ -12,8 +12,11 @@ use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch
 use cortex_m::asm;
 use cortex_m_rt::entry;
 
+#[inline(never)]
 fn delay(ms: u64) {
-    for _ in 0..(72000) {}
+    for _ in 0..(72 * ms) {
+        asm::nop();
+    }
 }
 
 #[entry]
@@ -35,10 +38,10 @@ fn main() -> ! {
         gpiod.odr.modify(|_, w| w.odr4().set_bit());
         gpiod.odr.modify(|_, w| w.odr5().set_bit());
         //gpiod.odr.modify(|_, w| w.odr6().set_bit());
-        delay(1000);
+        delay(200);
         gpiod.odr.modify(|_, w| w.odr4().clear_bit());
         gpiod.odr.modify(|_, w| w.odr5().clear_bit());
         //gpiod.odr.modify(|_, w| w.odr6().clear_bit());
-        delay(1000);
+        delay(200);
     }
 }
