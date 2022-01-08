@@ -12,6 +12,10 @@ use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch
 use cortex_m::asm;
 use cortex_m_rt::entry;
 
+fn delay(ms: u16) {
+    for _ in (0..ms) {}
+}
+
 #[entry]
 fn main() -> ! {
     asm::nop(); // To not have main optimize to abort in release mode, remove when you add code
@@ -22,18 +26,19 @@ fn main() -> ! {
 
     let gpiod = &peripherals.GPIOD;
 
-    gpiod.moder.write(
-        |w| w.moder4().output(), //w.moder5().output();
-    );
-
-    gpiod.moder.write(
-        |w| w.moder5().output(), //w.moder5().output();
-    );
-
-    gpiod.odr.modify(|_, w| w.odr4().set_bit());
-    gpiod.odr.modify(|_, w| w.odr5().clear_bit());
+    gpiod.moder.write(|w| {
+        w.moder4().output();
+        w.moder5().output()
+    });
 
     loop {
-        // your code goes here
+        gpiod.odr.modify(|_, w| w.odr4().set_bit());
+        gpiod.odr.modify(|_, w| w.odr5().set_bit());
+        //gpiod.odr.modify(|_, w| w.odr6().set_bit());
+        delay(10000);
+        gpiod.odr.modify(|_, w| w.odr4().clear_bit());
+        gpiod.odr.modify(|_, w| w.odr5().clear_bit());
+        //gpiod.odr.modify(|_, w| w.odr6().clear_bit());
+        delay(10000);
     }
 }
