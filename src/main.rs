@@ -25,7 +25,19 @@ fn main() -> ! {
 
     let mut peripherals = stm32f469::Peripherals::take().unwrap();
 
+    // enable gpiod peripheral
     peripherals.RCC.ahb1enr.write(|w| w.gpioden().set_bit());
+
+    // TIM6
+    peripherals.RCC.apb1enr.write(|w| w.tim6en().set_bit()); // enable TIM6 peripheral
+    peripherals.TIM6.cr1.write(|w| {
+        w.opm().set_bit(); // Counter stops counting at the next update event (clearing the CEN bit)
+        w.cen().clear_bit() // Counter enabled; CEN is cleared automatically in one-pulse mode, when an update event occurs.
+    });
+
+    peripherals.TIM6.psc.write(|w| w.psc().bits(8000)); // prescler
+    peripherals.TIM6.arr.write(|w| w.arr().bits(1000)); // 1000 ms
+    peripherals.TIM6.cr1.modify(|_, w| w.cen().set_bit()); // enable the counter
 
     let gpiod = &peripherals.GPIOD;
 
@@ -34,14 +46,31 @@ fn main() -> ! {
         w.moder5().output()
     });
 
+    let mut led_toggle = false;
     loop {
-        gpiod.odr.modify(|_, w| w.odr4().set_bit());
-        gpiod.odr.modify(|_, w| w.odr5().set_bit());
         //gpiod.odr.modify(|_, w| w.odr6().set_bit());
-        delay(200);
-        gpiod.odr.modify(|_, w| w.odr4().clear_bit());
-        gpiod.odr.modify(|_, w| w.odr5().clear_bit());
+
+        //delay(200);
+        let reader = peripherals.TIM6.sr.read();
+        let flag = reader.uif().bit_is_set();
+        if flag {
+            peripherals.TIM6.sr.modify(|_, w| w.uif().clear_bit());
+
+            if led_toggle {
+                gpiod.odr.modify(|_, w| w.odr4().set_bit());
+                gpiod.odr.modify(|_, w| w.odr5().set_bit());
+                led_toggle = false;
+            } else {
+                gpiod.odr.modify(|_, w| w.odr4().clear_bit());
+                gpiod.odr.modify(|_, w| w.odr5().clear_bit());
+                led_toggle = true;
+            }
+
+            peripherals.TIM6.cr1.modify(|_, w| w.cen().set_bit()); // enable the counter
+        };
+
         //gpiod.odr.modify(|_, w| w.odr6().clear_bit());
-        delay(200);
+
+        //delay(200);
     }
 }
