@@ -30,7 +30,8 @@ fn main() -> ! {
 
     // TIM6
     peripherals.RCC.apb1enr.write(|w| w.tim6en().set_bit()); // enable TIM6 peripheral
-    peripherals.TIM6.cr1.write(|w| {
+    let tim6 = &peripherals.TIM6;
+    tim6.cr1.write(|w| {
         w.opm().set_bit(); // Counter stops counting at the next update event (clearing the CEN bit)
         w.cen().clear_bit() // Counter enabled; CEN is cleared automatically in one-pulse mode, when an update event occurs.
     });
