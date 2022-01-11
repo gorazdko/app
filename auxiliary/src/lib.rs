@@ -1,7 +1,7 @@
 #![no_std]
 
 use cortex_m::asm;
-use stm32f4::stm32f469::{rcc, tim6, Peripherals, RCC, TIM6};
+use stm32f4::stm32f469::{gpiok, rcc, tim6, Peripherals, GPIOD, RCC, TIM6};
 
 #[cfg(test)]
 mod tests {
@@ -31,4 +31,23 @@ pub fn delay_tim(ms: u16, tim6: &'static tim6::RegisterBlock) {
         asm::nop();
     }
     tim6.sr.modify(|_, w| w.uif().clear_bit());
+}
+
+// enable LD2 and LD3
+pub fn leds_init(rcc: &'static rcc::RegisterBlock, gpiod: &'static gpiok::RegisterBlock) {
+    rcc.ahb1enr.write(|w| w.gpioden().set_bit());
+    gpiod.moder.write(|w| {
+        w.moder4().output();
+        w.moder5().output()
+    });
+}
+
+pub fn leds_on(gpiod: &'static gpiok::RegisterBlock) {
+    gpiod.odr.modify(|_, w| w.odr4().set_bit());
+    gpiod.odr.modify(|_, w| w.odr5().set_bit());
+}
+
+pub fn leds_off(gpiod: &'static gpiok::RegisterBlock) {
+    gpiod.odr.modify(|_, w| w.odr4().clear_bit());
+    gpiod.odr.modify(|_, w| w.odr5().clear_bit());
 }
