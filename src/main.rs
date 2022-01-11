@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use stm32f4::stm32f469;
+use stm32f4::stm32f469::{tim6, Peripherals, TIM6};
 
 // pick a panicking behavior
 use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
@@ -19,11 +19,21 @@ fn delay(ms: u64) {
     }
 }
 
+fn delay_tim(ms: u16, tim6: &'static tim6::RegisterBlock) {
+    tim6.arr.write(|w| w.arr().bits(ms));
+    tim6.cr1.modify(|_, w| w.cen().set_bit()); // enable the counter
+
+    while !tim6.sr.read().uif().bit_is_set() {
+        asm::nop();
+    }
+    tim6.sr.modify(|_, w| w.uif().clear_bit());
+}
+
 #[entry]
 fn main() -> ! {
     asm::nop(); // To not have main optimize to abort in release mode, remove when you add code
 
-    let mut peripherals = stm32f469::Peripherals::take().unwrap();
+    let mut peripherals = Peripherals::take().unwrap();
 
     // enable gpiod peripheral
     peripherals.RCC.ahb1enr.write(|w| w.gpioden().set_bit());
@@ -47,31 +57,15 @@ fn main() -> ! {
         w.moder5().output()
     });
 
-    let mut led_toggle = false;
     loop {
-        //gpiod.odr.modify(|_, w| w.odr6().set_bit());
+        delay_tim(1000, unsafe { &*TIM6::ptr() });
 
-        //delay(200);
-        let reader = peripherals.TIM6.sr.read();
-        let flag = reader.uif().bit_is_set();
-        if flag {
-            peripherals.TIM6.sr.modify(|_, w| w.uif().clear_bit());
+        gpiod.odr.modify(|_, w| w.odr4().set_bit());
+        gpiod.odr.modify(|_, w| w.odr5().set_bit());
 
-            if led_toggle {
-                gpiod.odr.modify(|_, w| w.odr4().set_bit());
-                gpiod.odr.modify(|_, w| w.odr5().set_bit());
-                led_toggle = false;
-            } else {
-                gpiod.odr.modify(|_, w| w.odr4().clear_bit());
-                gpiod.odr.modify(|_, w| w.odr5().clear_bit());
-                led_toggle = true;
-            }
+        delay_tim(1000, unsafe { &*TIM6::ptr() });
 
-            peripherals.TIM6.cr1.modify(|_, w| w.cen().set_bit()); // enable the counter
-        };
-
-        //gpiod.odr.modify(|_, w| w.odr6().clear_bit());
-
-        //delay(200);
+        gpiod.odr.modify(|_, w| w.odr4().clear_bit());
+        gpiod.odr.modify(|_, w| w.odr5().clear_bit());
     }
 }
