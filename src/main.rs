@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use stm32f4::stm32f469::{tim6, Peripherals, TIM6};
+use stm32f4::stm32f469::{rcc, tim6, Peripherals, RCC, TIM6};
 
 // pick a panicking behavior
 use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
@@ -19,6 +19,17 @@ fn delay(ms: u64) {
     }
 }
 
+fn delay_tim_init(tim6: &'static tim6::RegisterBlock, rcc: &'static rcc::RegisterBlock) {
+    // TIM6
+    rcc.apb1enr.write(|w| w.tim6en().set_bit()); // enable TIM6 peripheral
+    tim6.cr1.write(|w| {
+        w.opm().set_bit(); // Counter stops counting at the next update event (clearing the CEN bit)
+        w.cen().clear_bit() // Counter enabled; CEN is cleared automatically in one-pulse mode, when an update event occurs.
+    });
+
+    tim6.psc.write(|w| w.psc().bits(8000)); // prescler
+}
+
 fn delay_tim(ms: u16, tim6: &'static tim6::RegisterBlock) {
     tim6.arr.write(|w| w.arr().bits(ms));
     tim6.cr1.modify(|_, w| w.cen().set_bit()); // enable the counter
@@ -33,22 +44,12 @@ fn delay_tim(ms: u16, tim6: &'static tim6::RegisterBlock) {
 fn main() -> ! {
     asm::nop(); // To not have main optimize to abort in release mode, remove when you add code
 
-    let mut peripherals = Peripherals::take().unwrap();
+    let peripherals = Peripherals::take().unwrap();
 
     // enable gpiod peripheral
     peripherals.RCC.ahb1enr.write(|w| w.gpioden().set_bit());
 
-    // TIM6
-    peripherals.RCC.apb1enr.write(|w| w.tim6en().set_bit()); // enable TIM6 peripheral
-    let tim6 = &peripherals.TIM6;
-    tim6.cr1.write(|w| {
-        w.opm().set_bit(); // Counter stops counting at the next update event (clearing the CEN bit)
-        w.cen().clear_bit() // Counter enabled; CEN is cleared automatically in one-pulse mode, when an update event occurs.
-    });
-
-    peripherals.TIM6.psc.write(|w| w.psc().bits(8000)); // prescler
-    peripherals.TIM6.arr.write(|w| w.arr().bits(1000)); // 1000 ms
-    peripherals.TIM6.cr1.modify(|_, w| w.cen().set_bit()); // enable the counter
+    delay_tim_init(unsafe { &*TIM6::ptr() }, unsafe { &*RCC::ptr() });
 
     let gpiod = &peripherals.GPIOD;
 
